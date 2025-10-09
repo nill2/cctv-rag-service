@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+numpy
+Pillow>=9.0.0
+opencv-python-headless>=4.7.0
+facenet-pytorch>=2.5.2
+sentence-transformers>=2.2.2
+chromadb>=0.4.0
+python-multipart>=0.0.6
