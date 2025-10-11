@@ -1,0 +1,52 @@
+name: Deploy to Oracle VM (FTP and FACE SEARCH)
+
+on:
+  workflow_run:
+    workflows: ["ci:publish docker image"] # must match your build workflow name
+    branches: [main]
+    types:
+      - completed
+  workflow_dispatch: # optional manual trigger for redeploy
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy updated container to Oracle VM
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.FTP_IP }}
+          username: ${{ secrets.VM_FACEDETECTION_USER }}
+          key: ${{ secrets.VM_FACEDETECTION_SSH_KEY }}
+          timeout: 2100s
+          command_timeout: 2100s
+          script: |
+            echo "Waiting for image to be available..."
+            sleep 30
+
+            echo "Pulling and redeploying nill2/cctv-rag-service:latest..."
+            docker pull nill2/cctv-rag-service:latest
+
+            echo "Stopping old container..."
+            docker stop cctv-rag-service || true
+            docker rm cctv-rag-service || true
+
+            echo "Starting new container..."
+            docker run -d \
+              --name cctv-rag-service \
+              --memory="900m" \
+              --memory-swap="1.5g" \
+              --cpus="0.9" \
+              --restart=always \
+              -e MONGO_HOST="${{ secrets.MONGO_HOST }}" \
+              -e MONGO_PORT="${{ secrets.MONGO_PORT }}" \
+              -e MONGO_DB="${{ secrets.MONGO_DB }}" \
+              -e MONGO_COLLECTION="${{ secrets.MONGO_COLLECTION }}" \
+              -e FACE_COLLECTION="${{ secrets.FACE_COLLECTION }}" \
+              -p 8080:8080 \
+              nill2/cctv-rag-service:latest
+
+            echo "✅ Deployment complete! Cleaning up old images..."
+            docker image prune -f
