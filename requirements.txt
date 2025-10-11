@@ -23,3 +23,6 @@ rich>=13.7.0
 opencv-python-headless>=4.10.0.84,<4.11.0
 scipy>=1.13.0
 scikit-learn>=1.5.0
+
+# --- Mongo ---
+pymongo>=4.8.0
