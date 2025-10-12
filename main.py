@@ -82,10 +82,15 @@ async def search_unknown() -> dict[str, Any]:
 
 
 def run() -> None:
-    """Run FastAPI + MCP servers."""
-    import uvicorn
+    """Keep the container alive while MCP runs its internal server."""
+    import time
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    print("✅ Face Insight RAG API with MCP is running on port 8000...")
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        print("Shutting down gracefully...")
 
 
 if __name__ == "__main__":
