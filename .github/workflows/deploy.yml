@@ -45,7 +45,9 @@ jobs:
               -e MONGO_DB="${{ secrets.MONGO_DB }}" \
               -e MONGO_COLLECTION="${{ secrets.MONGO_COLLECTION }}" \
               -e FACE_COLLECTION="${{ secrets.FACE_COLLECTION }}" \
-              -p 8080:8080 \
+              -e KNOWN_FACES_COLLECTION="${{ secrets.KNOWN_FACES_COLLECTION }}" \
+              -p 8000:8000 \
+              -p 8001:8001 \
               nill2/cctv-rag-service:latest
 
             echo "✅ Deployment complete! Cleaning up old images..."
