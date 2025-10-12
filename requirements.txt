@@ -26,3 +26,7 @@ scikit-learn>=1.5.0
 
 # --- Mongo ---
 pymongo>=4.8.0
+
+
+# --- python ---
+python-dotenv

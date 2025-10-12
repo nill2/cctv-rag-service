@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGO_URI = os.getenv("MONGO_URI")
+MONGO_URI = os.getenv("MONGO_HOST")
 MONGO_DB = os.getenv("MONGO_DB", "nill-home")
 FACES_COLLECTION = os.getenv("MONGO_COLLECTION", "nill-faces")
 KNOWN_FACES_COLLECTION = os.getenv("KNOWN_FACES_COLLECTION", "nill-known-faces")
