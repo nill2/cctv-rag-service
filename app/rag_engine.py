@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import numpy as np
 from typing import Any
+from pymongo import MongoClient
 
 # Type alias for clarity
 NDArrayFloat = np.ndarray[Any, np.dtype[np.float32]]
@@ -17,6 +19,10 @@ class RAGEngine:
         self.texts: list[str] = []
         self.vectors: NDArrayFloat | None = None
         self.metadata: list[dict[str, Any]] = []
+
+    # ==============================
+    # Data Loading
+    # ==============================
 
     def load_vectors(self, face_records: list[dict[str, Any]]) -> None:
         """Load known face embeddings into memory.
@@ -37,10 +43,42 @@ class RAGEngine:
         ]
 
         embeddings: list[NDArrayFloat] = [
-            np.array(r["embedding"], dtype=np.float32) for r in face_records
+            np.array(r["embedding"], dtype=np.float32)
+            for r in face_records
+            if "embedding" in r
         ]
+
+        if not embeddings:
+            raise ValueError("No valid embeddings found in provided records.")
+
         self.vectors = np.vstack(embeddings)
         self.metadata = face_records
+
+    def load_from_mongo(self) -> None:
+        """Load face embeddings from MongoDB into memory."""
+        mongo_host = os.getenv("MONGO_HOST")
+        mongo_port = int(os.getenv("MONGO_PORT", "27017"))
+        mongo_db = os.getenv("MONGO_DB")
+        face_collection = os.getenv("FACE_COLLECTION")
+
+        if not all([mongo_host, mongo_db, face_collection]):
+            raise ValueError("Missing MongoDB configuration environment variables.")
+
+        print(f"🔗 Connecting to MongoDB: {mongo_host}")
+        client = MongoClient(mongo_host, mongo_port)
+        db = client[mongo_db]
+        collection = db[face_collection]
+
+        face_records = list(collection.find({}))
+        if not face_records:
+            raise ValueError("No records found in MongoDB face collection.")
+
+        self.load_vectors(face_records)
+        print(f"✅ Loaded {len(face_records)} face embeddings from MongoDB.")
+
+    # ==============================
+    # Core Search Functions
+    # ==============================
 
     def _cosine_similarity(self, query_vec: NDArrayFloat) -> NDArrayFloat:
         """Compute cosine similarity between query vector and stored vectors."""
@@ -52,15 +90,7 @@ class RAGEngine:
         return similarity
 
     def query(self, query_vec: list[float], top_k: int = 5) -> list[dict[str, Any]]:
-        """Find the top matching faces for a given embedding vector.
-
-        Args:
-            query_vec (list[float]): The embedding vector to search for.
-            top_k (int, optional): Number of results to return. Defaults to 5.
-
-        Returns:
-            list[dict[str, Any]]: Ranked search results with similarity scores.
-        """
+        """Find the top matching faces for a given embedding vector."""
         if self.vectors is None:
             raise ValueError("Vector store not initialized. Call load_vectors() first.")
 

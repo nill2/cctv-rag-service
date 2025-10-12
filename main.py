@@ -10,7 +10,6 @@ from fastapi import FastAPI, Query
 from mcp.server.fastmcp import FastMCP
 from app.rag_engine import RAGEngine
 
-
 # ==============================
 # Lifespan & Application setup
 # ==============================
@@ -24,6 +23,12 @@ async def lifespan(app: FastAPI):  # pylint: disable=unused-argument
     """Initialize and shutdown the MCP server."""
     global mcp  # pylint: disable=global-statement
     mcp = FastMCP(name="face-insight-rag")
+
+    # 🟢 Load data from MongoDB before starting servers
+    try:
+        rag_engine.load_from_mongo()
+    except Exception as e:
+        print(f"⚠️ Failed to load data from MongoDB: {e}")
 
     # Register MCP tools
     @mcp.tool()
