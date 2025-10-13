@@ -5,25 +5,52 @@ import logging
 from typing import List
 from fastapi import FastAPI, UploadFile, File, HTTPException, Response
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware  # ✅ Added
 from app.face_search import FaceSearcher
 from app.rag_engine import RAGEngine
 from app.db import get_mongo_collections
 from app.utils import to_jsonable
 
-# Configure logging
+# ---------------------------------------------------------
+# Logging setup
+# ---------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
 )
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------
+# App initialization
+# ---------------------------------------------------------
 app = FastAPI(title="CCTV Face Recognition API", version="1.0.0")
 
-# Initialize MongoDB collections
+# ✅ Allow frontend (Render + local dev) via CORS
+origins = [
+    "https://nill-spa.onrender.com",  # production frontend on Render
+    "http://127.0.0.1:5000",  # local Flask dev
+    "http://localhost:5000",  # alternate local dev
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ---------------------------------------------------------
+# Initialize MongoDB + app components
+# ---------------------------------------------------------
 faces_collection, known_collection, photos_collection = get_mongo_collections()
 searcher = FaceSearcher(faces_collection, known_collection, photos_collection)
 rag_engine = RAGEngine(faces_collection)
 
 UPLOAD_FILE_DEP = File(...)
+
+# ---------------------------------------------------------
+# Routes
+# ---------------------------------------------------------
 
 
 @app.get("/health")
@@ -105,7 +132,9 @@ def get_current_cctv() -> JSONResponse:
     return JSONResponse({"result": to_jsonable(latest)})
 
 
-# ✅ New endpoints for fetching photos by name/filename
+# ---------------------------------------------------------
+# Image fetch endpoints
+# ---------------------------------------------------------
 
 
 @app.get("/known_face_image/{name}")
