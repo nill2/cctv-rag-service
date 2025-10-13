@@ -14,7 +14,7 @@ class RAGEngine:
     def __init__(self, faces_collection: Collection | None = None) -> None:
         """Initialize the RAGEngine with a MongoDB faces collection."""
         if faces_collection is None:
-            faces_collection, _ = get_mongo_collections()
+            faces_collection, _, _ = get_mongo_collections()  # ✅ fixed unpacking
         self.faces_collection: Collection = faces_collection
 
     def _generate_embedding(
@@ -72,5 +72,5 @@ class RAGEngine:
                 enriched_doc["similarity"] = similarity
                 results.append(enriched_doc)
 
-        # Explicit cast to satisfy mypy that this returns the correct type
+        # ✅ Explicit cast ensures correct static typing for mypy
         return cast(List[Dict[str, Any]], to_jsonable(results))
