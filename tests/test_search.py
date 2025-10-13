@@ -12,6 +12,7 @@ def mock_collections():
     """Create mock MongoDB collections for testing."""
     face_collection = MagicMock()
     known_collection = MagicMock()
+    photos_collection = MagicMock()
 
     face_collection.find.return_value = [
         {"filename": "photo1.jpg", "matched_persons": ["Alice"], "face_count": 1},
@@ -21,13 +22,18 @@ def mock_collections():
         {"name": "Alice", "embedding": np.ones(128).tolist()},
         {"name": "Bob", "embedding": np.zeros(128).tolist()},
     ]
-    return face_collection, known_collection
+    photos_collection.find_one.return_value = {
+        "filename": "latest_cctv.jpg",
+        "date": "2025-01-01T12:00:00Z",
+    }
+
+    return face_collection, known_collection, photos_collection
 
 
 def test_find_known_faces_by_name(mock_collections):
     """Should return list of photos where the given name appears."""
-    face_collection, known_collection = mock_collections
-    searcher = FaceSearcher(face_collection, known_collection)
+    face_collection, known_collection, photos_collection = mock_collections
+    searcher = FaceSearcher(face_collection, known_collection, photos_collection)
     results = searcher.find_known_faces_by_name("Alice")
 
     assert isinstance(results, list)
@@ -39,8 +45,8 @@ def test_find_known_faces_by_name(mock_collections):
 
 def test_find_unknown_faces(mock_collections):
     """Should return only documents with no matched persons."""
-    face_collection, known_collection = mock_collections
-    searcher = FaceSearcher(face_collection, known_collection)
+    face_collection, known_collection, photos_collection = mock_collections
+    searcher = FaceSearcher(face_collection, known_collection, photos_collection)
     results = searcher.find_unknown_faces()
 
     assert len(results) == 1
@@ -50,7 +56,7 @@ def test_find_unknown_faces(mock_collections):
 
 def test_rag_search_by_photo(mock_collections):
     """Should return list of documents enriched with similarity scores."""
-    face_collection, _ = mock_collections
+    face_collection, _, _ = mock_collections
     engine = RAGEngine(face_collection)
 
     results = engine.search_by_photo(b"fake_image_data", threshold=0.5)
