@@ -10,6 +10,7 @@ from app.face_search import FaceSearcher
 from app.rag_engine import RAGEngine
 from app.db import get_mongo_collections
 from app.utils import to_jsonable
+from urllib.parse import unquote
 
 # ---------------------------------------------------------
 # Logging setup
@@ -153,17 +154,24 @@ def get_known_face_image(name: str) -> Response:
         ) from e  # pylint: disable=raise-missing-from
 
 
-@app.get("/face_image/{filename}")
 def get_face_image(filename: str) -> Response:
     """Return the image bytes for a detected face by filename."""
-    doc = searcher.get_face_image(filename)
+    # Decode any URL-encoded characters (like %28 -> (, %29 -> ))
+    decoded_filename = unquote(filename)
+
+    logger.info("Fetching face image for decoded filename: %s", decoded_filename)
+
+    doc = searcher.get_face_image(decoded_filename)
     if not doc or "image" not in doc:
-        raise HTTPException(status_code=404, detail=f"No image found for {filename}")
+        raise HTTPException(
+            status_code=404, detail=f"No image found for {decoded_filename}"
+        )
+
     try:
         img_bytes = base64.b64decode(doc["image"])
         return Response(content=img_bytes, media_type="image/jpeg")
     except Exception as e:
-        logger.error("Error decoding face image for %s: %s", filename, e)
+        logger.error("Error decoding face image for %s: %s", decoded_filename, e)
         raise HTTPException(
             status_code=500, detail=str(e)
         ) from e  # pylint: disable=raise-missing-from
@@ -172,14 +180,19 @@ def get_face_image(filename: str) -> Response:
 @app.get("/photo_image/{filename}")
 def get_photo_image(filename: str) -> Response:
     """Return the image bytes for a photo by filename."""
-    doc = searcher.get_photo_image(filename)
+    decoded_filename = unquote(filename)
+    logger.info("Fetching photo image for decoded filename: %s", decoded_filename)
+
+    doc = searcher.get_photo_image(decoded_filename)
     if not doc or "image" not in doc:
-        raise HTTPException(status_code=404, detail=f"No image found for {filename}")
+        raise HTTPException(
+            status_code=404, detail=f"No image found for {decoded_filename}"
+        )
     try:
         img_bytes = base64.b64decode(doc["image"])
         return Response(content=img_bytes, media_type="image/jpeg")
     except Exception as e:
-        logger.error("Error decoding photo image for %s: %s", filename, e)
+        logger.error("Error decoding photo image for %s: %s", decoded_filename, e)
         raise HTTPException(
             status_code=500, detail=str(e)
         ) from e  # pylint: disable=raise-missing-from
