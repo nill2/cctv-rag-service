@@ -3,9 +3,10 @@
 import base64
 import logging
 from typing import List
+from urllib.parse import unquote
 from fastapi import FastAPI, UploadFile, File, HTTPException, Response
 from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware  # ✅ Added
+from fastapi.middleware.cors import CORSMiddleware
 from app.face_search import FaceSearcher
 from app.rag_engine import RAGEngine
 from app.db import get_mongo_collections
@@ -26,7 +27,7 @@ app = FastAPI(title="CCTV Face Recognition API", version="1.0.0")
 
 # ✅ Allow frontend (Render + local dev) via CORS
 origins = [
-    "https://nill-spa.onrender.com",  # production frontend on Render
+    "https://nill-spa.onrender.com",  # production frontend
     "http://127.0.0.1:5000",  # local Flask dev
     "http://localhost:5000",  # alternate local dev
 ]
@@ -40,7 +41,7 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------
-# Initialize MongoDB + app components
+# Initialize MongoDB + components
 # ---------------------------------------------------------
 faces_collection, known_collection, photos_collection = get_mongo_collections()
 searcher = FaceSearcher(faces_collection, known_collection, photos_collection)
@@ -104,9 +105,7 @@ async def find_person_from_photo(
         return JSONResponse({"results": results, "threshold": threshold})
     except Exception as e:
         logger.error("Error processing photo search: %s", e)
-        raise HTTPException(
-            status_code=500, detail=str(e)
-        ) from e  # pylint: disable=raise-missing-from
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/saved_known_faces")
@@ -137,33 +136,51 @@ def get_current_cctv() -> JSONResponse:
 # ---------------------------------------------------------
 
 
+def decode_image_field(doc: dict) -> bytes:
+    """Return extracted image bytes from 'image' or 'data' field."""
+    raw = doc.get("image") or doc.get("data")
+    if raw is None:
+        raise ValueError("No image or data field found in document")
+
+    # Handle different MongoDB binary/base64 encodings
+    if isinstance(raw, bytes):
+        return raw
+    if isinstance(raw, dict) and "$binary" in raw:
+        return base64.b64decode(raw["$binary"]["base64"])
+    return base64.b64decode(raw)
+
+
 @app.get("/known_face_image/{name}")
 def get_known_face_image(name: str) -> Response:
     """Return the image bytes for a known face by name."""
     doc = searcher.get_known_face_image(name)
-    if not doc or "image" not in doc:
+    if not doc:
         raise HTTPException(status_code=404, detail=f"No image found for {name}")
     try:
-        img_bytes = base64.b64decode(doc["image"])
+        img_bytes = decode_image_field(doc)
         return Response(content=img_bytes, media_type="image/jpeg")
     except Exception as e:
         logger.error("Error decoding known face image for %s: %s", name, e)
-        raise HTTPException(
-            status_code=500, detail=str(e)
-        ) from e  # pylint: disable=raise-missing-from
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/face_image/{filename}")
 def get_face_image(filename: str) -> Response:
     """Return the image bytes for a detected face by filename."""
-    doc = searcher.get_face_image(filename)
-    if not doc or "image" not in doc:
-        raise HTTPException(status_code=404, detail=f"No image found for {filename}")
+    decoded_filename = unquote(filename)
+    logger.info("Fetching face image for decoded filename: %s", decoded_filename)
+
+    doc = searcher.get_face_image(decoded_filename)
+    if not doc:
+        raise HTTPException(
+            status_code=404, detail=f"No image found for {decoded_filename}"
+        )
+
     try:
-        img_bytes = base64.b64decode(doc["image"])
+        img_bytes = decode_image_field(doc)
         return Response(content=img_bytes, media_type="image/jpeg")
     except Exception as e:
-        logger.error("Error decoding face image for %s: %s", filename, e)
+        logger.error("Error decoding face image for %s: %s", decoded_filename, e)
         raise HTTPException(
             status_code=500, detail=str(e)
         ) from e  # pylint: disable=raise-missing-from
@@ -172,14 +189,20 @@ def get_face_image(filename: str) -> Response:
 @app.get("/photo_image/{filename}")
 def get_photo_image(filename: str) -> Response:
     """Return the image bytes for a photo by filename."""
-    doc = searcher.get_photo_image(filename)
-    if not doc or "image" not in doc:
-        raise HTTPException(status_code=404, detail=f"No image found for {filename}")
+    decoded_filename = unquote(filename)
+    logger.info("Fetching photo image for decoded filename: %s", decoded_filename)
+
+    doc = searcher.get_photo_image(decoded_filename)
+    if not doc:
+        raise HTTPException(
+            status_code=404, detail=f"No image found for {decoded_filename}"
+        )
+
     try:
-        img_bytes = base64.b64decode(doc["image"])
+        img_bytes = decode_image_field(doc)
         return Response(content=img_bytes, media_type="image/jpeg")
     except Exception as e:
-        logger.error("Error decoding photo image for %s: %s", filename, e)
+        logger.error("Error decoding photo image for %s: %s", decoded_filename, e)
         raise HTTPException(
             status_code=500, detail=str(e)
         ) from e  # pylint: disable=raise-missing-from
