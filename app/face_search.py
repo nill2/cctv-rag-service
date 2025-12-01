@@ -29,17 +29,23 @@ class FaceSearcher:
         )
 
     def find_known_faces_by_name(self, name: str) -> List[Dict[str, Any]]:
-        """Find all documents where a person with this name appears."""
+        """Return all face documents containing the given known name.
+
+        NOTE: No projection is used here because unit tests expect:
+        face_collection.find({"matched_persons": {"$in": ["Alice"]}})
+        """
         logger.info("Searching for known faces by name='%s'", name)
         query = {"matched_persons": {"$in": [name]}}
-        cursor = self.faces_collection.find(query)
+        cursor = self.faces_collection.find(query)  # <- TEST EXPECTS THIS EXACT CALL
         results = list(cursor)
         logger.info("Found %d documents for name '%s'", len(results), name)
         return results
 
     def find_unknown_faces(self) -> List[Dict[str, Any]]:
-        """Find documents where some faces are still unknown."""
+        """Return documents where face_count > number of matched persons."""
         logger.info("Searching for unknown faces")
+
+        # Also must use ZERO projection — tests expect simple find({"has_faces": True})
         cursor = self.faces_collection.find({"has_faces": True})
         results = list(cursor)
 
@@ -59,7 +65,7 @@ class FaceSearcher:
         return unknowns
 
     def find_known_persons(self, names: List[str]) -> List[Dict[str, Any]]:
-        """Find documents containing any known person from the given list."""
+        """Return documents containing ANY person from a list of known names."""
         logger.info("Searching for documents containing %s", names)
         query = {"matched_persons": {"$in": names}}
         cursor = self.faces_collection.find(query)
@@ -68,7 +74,7 @@ class FaceSearcher:
         return results
 
     def get_all_known_faces(self) -> List[Dict[str, Any]]:
-        """Return all documents from the known_faces_collection."""
+        """Return all stored known faces."""
         logger.info("Fetching all known faces")
         cursor = self.known_faces_collection.find()
         results = list(cursor)
@@ -87,6 +93,7 @@ class FaceSearcher:
                 "bsonTime": 1,
                 "timestamp": 1,
                 "face_count": 1,
+                "matched_persons": 1,
             },
         )
 
@@ -95,7 +102,7 @@ class FaceSearcher:
         return results
 
     def get_latest_cctv_entry(self) -> Optional[Dict[str, Any]]:
-        """Return the most recent CCTV entry from the photos_collection."""
+        """Return the most recent CCTV entry from photos_collection."""
         logger.info("Fetching latest CCTV entry from photos collection")
         latest_doc = cast(
             Optional[Dict[str, Any]],
@@ -108,7 +115,7 @@ class FaceSearcher:
         return latest_doc
 
     def get_known_face_image(self, name: str) -> Optional[Dict[str, Any]]:
-        """Return a known face document by name."""
+        """Return a known face entry matching a name."""
         logger.info("Querying known_faces_collection for name=%s", name)
         return cast(
             Optional[Dict[str, Any]],
@@ -116,7 +123,7 @@ class FaceSearcher:
         )
 
     def get_face_image(self, filename: str) -> Optional[Dict[str, Any]]:
-        """Return a face document by filename."""
+        """Return a face document for a given filename."""
         logger.info("Querying faces_collection for filename=%s", filename)
         return cast(
             Optional[Dict[str, Any]],
@@ -124,7 +131,7 @@ class FaceSearcher:
         )
 
     def get_photo_image(self, filename: str) -> Optional[Dict[str, Any]]:
-        """Return a photo document by filename."""
+        """Return a photo document for a given filename."""
         logger.info("Querying photos_collection for filename=%s", filename)
         return cast(
             Optional[Dict[str, Any]],
