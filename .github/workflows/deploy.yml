@@ -2,11 +2,10 @@ name: Deploy to Oracle VM (FTP and FACE SEARCH)
 
 on:
   workflow_run:
-    workflows: ["ci:publish docker image"] # must match your build workflow name
+    workflows: ["ci:publish docker image"]
     branches: [main]
-    types:
-      - completed
-  workflow_dispatch: # optional manual trigger for redeploy
+    types: [completed]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -14,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy updated container to Oracle VM
+      - name: Deploy backend to Oracle VM
         uses: appleboy/ssh-action@v1.1.0
         with:
           host: ${{ secrets.FTP_IP }}
@@ -26,14 +25,17 @@ jobs:
             echo "Waiting for image to be available..."
             sleep 30
 
-            echo "Pulling and redeploying nill2/cctv-rag-service:latest..."
+            echo "Ensuring docker network exists..."
+            docker network create cctv-net || true
+
+            echo "Pulling latest backend image..."
             docker pull nill2/cctv-rag-service:latest
 
-            echo "Stopping old container..."
+            echo "Stopping old backend container..."
             docker stop cctv-rag-service || true
             docker rm cctv-rag-service || true
 
-            echo "Starting new container..."
+            echo "Starting backend container..."
             docker run -d \
               --name cctv-rag-service \
               --memory="900m" \
@@ -50,5 +52,8 @@ jobs:
               -p 8001:8001 \
               nill2/cctv-rag-service:latest
 
-            echo "✅ Deployment complete! Cleaning up old images..."
+            echo "Connecting backend to network..."
+            docker network connect cctv-net cctv-rag-service || true
+
+            echo "Done. Cleaning old images..."
             docker image prune -f
