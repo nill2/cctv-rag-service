@@ -117,7 +117,7 @@ def get_saved_known_faces() -> JSONResponse:
 
 @app.get("/photos_detected_faces")
 def photos_detected_faces() -> JSONResponse:
-    """Return all faces with detected faces."""
+    """Return lightweight list of detected faces (no images)."""
     results = searcher.photos_detected_faces()
     return JSONResponse({"results": to_jsonable(results)})
 
