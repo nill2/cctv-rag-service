@@ -65,17 +65,9 @@ FACES_HISTORY=
 
 ## 🐳 Run with Docker
 
-```
+```bash
 docker-compose up --build
 ```
-
-Then access the API docs in your browser at:
-
-```
-http://localhost:8001/docs
-```
-
----
 
 ## 🧩 API Overview
 
@@ -90,7 +82,7 @@ Simple health check to confirm that the service is up and connected to MongoDB.
 
 **Returns:**
 
-```
+```text
 { "status": "ok" }
 ```
 
@@ -103,7 +95,7 @@ Find all photos containing one or more known persons.
 
 **Body (JSON):**
 
-```
+```text
 {
   "names": ["Danil", "Alex"]
 }
@@ -111,7 +103,7 @@ Find all photos containing one or more known persons.
 
 **Returns:**
 
-```
+```text
 {
   "results": [...],
   "skipped_names": ["Unknown Person"]
@@ -127,7 +119,7 @@ Find all photos containing unknown faces — i.e., faces that were not matched t
 
 **Returns:**
 
-```
+```text
 { "results": [...] }
 ```
 
@@ -146,7 +138,7 @@ Performs deterministic embedding generation and cosine similarity search.
 
 **Returns:**
 
-```
+```text
 {
   "results": [...],
   "threshold": 0.8
@@ -162,7 +154,7 @@ Return all known faces from the `known_faces_collection`.
 
 **Returns:**
 
-```
+```text
 { "results": [...] }
 ```
 
@@ -175,7 +167,7 @@ Return all photos that contain detected faces (from the `photos` collection).
 
 **Returns:**
 
-```
+```text
 { "results": [...] }
 ```
 
@@ -188,7 +180,7 @@ Return the most recent CCTV entry from the `photos` collection.
 
 **Returns:**
 
-```
+```text
 { "result": {...} }
 ```
 
@@ -209,7 +201,7 @@ Return the most recent CCTV entry from the `photos` collection.
 
 ## 🧱 Project Structure
 
-```
+```text
 app/
 ├── db.py                # MongoDB connection helpers
 ├── face_search.py       # Known/unknown face search logic
