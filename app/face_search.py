@@ -76,11 +76,22 @@ class FaceSearcher:
         return results
 
     def photos_detected_faces(self) -> List[Dict[str, Any]]:
-        """Return all documents from the faces_collection."""
-        logger.info("Fetching all detected faces from faces_collection")
-        cursor = self.faces_collection.find()
+        """Return ONLY metadata about detected faces (no binary fields)."""
+        logger.info("Fetching face metadata from faces_collection")
+
+        cursor = self.faces_collection.find(
+            {},
+            {
+                "_id": 1,
+                "filename": 1,
+                "bsonTime": 1,
+                "timestamp": 1,
+                "face_count": 1,
+            },
+        )
+
         results = list(cursor)
-        logger.info("Found %d face entries", len(results))
+        logger.info("Returning %d metadata documents", len(results))
         return results
 
     def get_latest_cctv_entry(self) -> Optional[Dict[str, Any]]:
