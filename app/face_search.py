@@ -46,10 +46,11 @@ class FaceSearcher:
 
     # ----------------------------------------------------------------------
     def find_unknown_faces(self) -> List[Dict[str, Any]]:
-        """Return documents where face_count > number of matched_persons."""
+        """Return documents where face_count > number of matched_persons.
+        Removes binary fields before returning.
+        """
         logger.info("Searching for unknown faces")
 
-        # Must NOT include projection – tests require full documents.
         cursor = self.faces_collection.find({"has_faces": True})
         results = list(cursor)
 
@@ -61,6 +62,10 @@ class FaceSearcher:
             matched_count = len(matched) if isinstance(matched, list) else 0
 
             if face_count > matched_count:
+                # --- REMOVE BINARY FIELDS BEFORE SENDING RESPONSE ---
+                doc.pop("data", None)
+                doc.pop("embedding", None)
+                doc.pop("photo", None)
                 unknowns.append(doc)
 
         logger.info(
