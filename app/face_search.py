@@ -38,7 +38,15 @@ class FaceSearcher:
         logger.info("Searching for known faces by name='%s'", name)
 
         query = {"matched_persons": {"$in": [name]}}
-        cursor = self.faces_collection.find(query)
+        cursor = self.faces_collection.find(
+            query,
+            {
+                "data": 0,  # remove photo blobs
+                "face_embedding": 0,  # if exists
+                "annotated_bytes": 0,
+                "image": 0,  # if exists
+            },
+        )
         results = list(cursor)
 
         logger.info("Found %d documents for name '%s'", len(results), name)
@@ -54,7 +62,8 @@ class FaceSearcher:
             {"has_faces": True},
             {
                 "data": 0,  # remove photo blobs
-                "embedding": 0,  # if exists
+                "face_embedding": 0,  # if exists
+                "annotated_bytes": 0,
                 "image": 0,  # if exists
             },
         )
