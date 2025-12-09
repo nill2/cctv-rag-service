@@ -116,7 +116,7 @@ class FaceSearcher:
                 "face_count": 1,
                 "matched_persons": 1,
             },
-        )
+        ).sort("bsonTime", -1)
 
         results = list(cursor)
         logger.info("Returning %d metadata documents", len(results))
